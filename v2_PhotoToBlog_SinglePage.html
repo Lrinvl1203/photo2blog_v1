@@ -1,0 +1,1756 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PhotoToBlog - AI 블로그 생성기</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #2563eb;
+            --primary-hover: #1d4ed8;
+            --secondary-color: #64748b;
+            --success-color: #059669;
+            --error-color: #dc2626;
+            --warning-color: #d97706;
+            --background: #ffffff;
+            --surface: #f8fafc;
+            --border: #e2e8f0;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-muted: #94a3b8;
+        }
+
+        [data-theme="dark"] {
+            --background: #0f172a;
+            --surface: #1e293b;
+            --border: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+            --text-muted: #64748b;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--background);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: all 0.3s ease;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Header */
+        .header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .header-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        /* Main Content */
+        .main {
+            min-height: calc(100vh - 160px);
+            padding: 2rem 0;
+        }
+
+        .hero {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .hero h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--primary-color), #7c3aed);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero p {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+        }
+
+        /* API Key Section */
+        .api-key-section {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .api-key-section.error {
+            border-color: var(--error-color);
+            background: #fef2f2;
+        }
+
+        [data-theme="dark"] .api-key-section.error {
+            background: #1f1a1a;
+        }
+
+        /* Form Styles */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--background);
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: all 0.2s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .form-textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        /* Button Styles */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            text-align: center;
+            justify-content: center;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: var(--surface);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: var(--border);
+        }
+
+        .btn-success {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .btn-error {
+            background: var(--error-color);
+            color: white;
+        }
+
+        .btn-small {
+            padding: 0.5rem 1rem;
+            font-size: 0.8rem;
+        }
+
+        /* Photo Upload */
+        .photo-section {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .photo-item {
+            background: var(--background);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+        }
+
+        .photo-preview {
+            width: 150px;
+            height: 100px;
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+
+        .photo-preview:hover {
+            border-color: var(--primary-color);
+            background: var(--surface);
+        }
+
+        .photo-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 6px;
+        }
+
+        .photo-content {
+            flex: 1;
+        }
+
+        /* Language & Theme Controls */
+        .select {
+            padding: 0.5rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--background);
+            color: var(--text-primary);
+            font-size: 0.9rem;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: var(--background);
+            border-radius: 12px;
+            padding: 2rem;
+            max-width: 90vw;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid transparent;
+            border-top: 2px solid currentColor;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tab {
+            padding: 0.75rem 1rem;
+            border: none;
+            background: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s ease;
+        }
+
+        .tab.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Tone Adjuster */
+        .tone-controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .tone-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2rem;
+            }
+            
+            .photo-item {
+                flex-direction: column;
+            }
+            
+            .photo-preview {
+                width: 100%;
+                height: 150px;
+            }
+
+            .header-content {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .tone-controls {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Utility Classes */
+        .hidden { display: none !important; }
+        .text-center { text-align: center; }
+        .text-error { color: var(--error-color); }
+        .text-success { color: var(--success-color); }
+        .mb-1 { margin-bottom: 0.5rem; }
+        .mb-2 { margin-bottom: 1rem; }
+        .mt-2 { margin-top: 1rem; }
+        .flex { display: flex; }
+        .items-center { align-items: center; }
+        .justify-between { justify-content: space-between; }
+        .gap-1 { gap: 0.5rem; }
+        .gap-2 { gap: 1rem; }
+        .w-full { width: 100%; }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">PhotoToBlog</div>
+                <div class="header-controls">
+                    <select id="languageSelect" class="select">
+                        <option value="ko">한국어</option>
+                        <option value="en">English</option>
+                        <option value="ja">日本語</option>
+                        <option value="zh">中文</option>
+                        <option value="es">Español</option>
+                        <option value="fr">Français</option>
+                    </select>
+                    <button id="themeToggle" class="btn btn-secondary btn-small">🌙</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+        <div class="container">
+            <!-- Hero Section -->
+            <div class="hero">
+                <h1 data-i18n="app_title">몇 초 만에 멋진 블로그 만들기</h1>
+                <p data-i18n="app_subtitle">사진을 업로드하고, 세부 정보를 추가하면 AI가 글을 작성해 드립니다.</p>
+            </div>
+
+            <!-- API Key Section -->
+            <div class="api-key-section" id="apiKeySection">
+                <div class="form-group">
+                    <label class="form-label" data-i18n="api_key_label">Gemini API 키</label>
+                    <input type="password" id="apiKey" class="form-input" placeholder="AIzaSy..." data-i18n-placeholder="api_key_placeholder">
+                    <small style="color: var(--text-muted); margin-top: 0.5rem; display: block;" data-i18n="api_key_help">
+                        Google AI Studio에서 무료로 API 키를 받을 수 있습니다.
+                    </small>
+                </div>
+            </div>
+
+            <!-- Main App Container -->
+            <div id="appContainer">
+                <!-- Blog Generator Form -->
+                <div id="blogForm" class="form-section">
+                    <div class="form-group">
+                        <label class="form-label" data-i18n="form_category_label">블로그 카테고리</label>
+                        <input type="text" id="category" class="form-input" data-i18n-placeholder="form_category_placeholder">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" data-i18n="form_topic_label">주제 / 주요 아이디어</label>
+                        <input type="text" id="topic" class="form-input" data-i18n-placeholder="form_topic_placeholder">
+                    </div>
+
+                    <div class="photo-section">
+                        <h3 class="mb-2" data-i18n="form_photos_title">사진 & 설명</h3>
+                        <div id="photoContainer"></div>
+                        <button type="button" id="addPhotoBtn" class="btn btn-secondary">
+                            ➕ <span data-i18n="form_add_photos_button">사진 추가하기</span>
+                        </button>
+                    </div>
+
+                    <div class="text-center">
+                        <button type="button" id="reviewBtn" class="btn btn-primary">
+                            <span data-i18n="form_review_prompt_button">프롬프트 검토</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Loading Section -->
+                <div id="loadingSection" class="hidden text-center">
+                    <div class="spinner" style="width: 40px; height: 40px; margin-bottom: 1rem;"></div>
+                    <p id="loadingMessage" style="color: var(--text-secondary);">AI의 창의력을 예열 중...</p>
+                </div>
+
+                <!-- Blog Output Section -->
+                <div id="blogOutput" class="hidden">
+                    <div class="flex justify-between items-center mb-2">
+                        <h2 data-i18n="output_title">생성된 블로그 포스트</h2>
+                        <div class="flex gap-1">
+                            <button id="addContentBtn" class="btn btn-secondary btn-small">
+                                <span data-i18n="output_add_modify_button">콘텐츠 추가/수정</span>
+                            </button>
+                            <button id="adjustToneBtn" class="btn btn-secondary btn-small">
+                                <span data-i18n="output_adjust_tone_button">톤 조절</span>
+                            </button>
+                            <button id="createAnotherBtn" class="btn btn-secondary btn-small">
+                                <span data-i18n="output_create_another_button">다른 블로그 포스트 만들기</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="tabs">
+                        <button class="tab active" data-tab="preview" data-i18n="output_tab_preview">미리보기</button>
+                        <button class="tab" data-tab="html" data-i18n="output_tab_html">HTML</button>
+                        <button class="tab" data-tab="markdown" data-i18n="output_tab_markdown">마크다운</button>
+                        <button class="tab" data-tab="text" data-i18n="output_tab_text">텍스트</button>
+                    </div>
+
+                    <div class="tab-content active" id="previewTab">
+                        <div id="blogPreview" style="background: var(--surface); padding: 2rem; border-radius: 8px; border: 1px solid var(--border);"></div>
+                    </div>
+
+                    <div class="tab-content" id="htmlTab">
+                        <div style="position: relative;">
+                            <button class="btn btn-small btn-secondary" style="position: absolute; top: 10px; right: 10px; z-index: 10;" onclick="copyToClipboard('htmlContent')">
+                                <span data-i18n="output_copy_html">HTML 복사</span>
+                            </button>
+                            <pre id="htmlContent" style="background: var(--surface); padding: 2rem; border-radius: 8px; border: 1px solid var(--border); overflow-x: auto; white-space: pre-wrap;"></pre>
+                        </div>
+                    </div>
+
+                    <div class="tab-content" id="markdownTab">
+                        <div style="position: relative;">
+                            <button class="btn btn-small btn-secondary" style="position: absolute; top: 10px; right: 10px; z-index: 10;" onclick="copyToClipboard('markdownContent')">
+                                <span data-i18n="output_copy_markdown">마크다운 복사</span>
+                            </button>
+                            <pre id="markdownContent" style="background: var(--surface); padding: 2rem; border-radius: 8px; border: 1px solid var(--border); overflow-x: auto; white-space: pre-wrap;"></pre>
+                        </div>
+                    </div>
+
+                    <div class="tab-content" id="textTab">
+                        <div style="position: relative;">
+                            <button class="btn btn-small btn-secondary" style="position: absolute; top: 10px; right: 10px; z-index: 10;" onclick="copyToClipboard('textContent')">
+                                <span data-i18n="output_copy_text">텍스트 복사</span>
+                            </button>
+                            <pre id="textContent" style="background: var(--surface); padding: 2rem; border-radius: 8px; border: 1px solid var(--border); overflow-x: auto; white-space: pre-wrap;"></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modals -->
+    <!-- Prompt Review Modal -->
+    <div id="promptModal" class="modal">
+        <div class="modal-content" style="width: 800px;">
+            <h2 class="mb-2" data-i18n="review_title">프롬프트 검토</h2>
+            <p class="mb-2" style="color: var(--text-secondary);" data-i18n="review_subtitle">AI가 이 프롬프트를 사용하여 블로그 포스트를 생성합니다. 아래에서 수정하여 지침을 구체화할 수 있습니다.</p>
+            
+            <div class="form-group">
+                <label class="form-label" data-i18n="review_word_count_label">목표 글자 수</label>
+                <select id="wordCountSelect" class="form-input">
+                    <option value="800" data-i18n="review_wc_option_1">약 800자</option>
+                    <option value="1500" data-i18n="review_wc_option_2">약 1500자</option>
+                    <option value="2000" selected data-i18n="review_wc_option_3">약 2000자 (기본)</option>
+                    <option value="2500" data-i18n="review_wc_option_4">약 2500자 이상</option>
+                    <option value="custom" data-i18n="review_wc_option_5">직접 입력</option>
+                </select>
+                <input type="number" id="customWordCount" class="form-input mt-2 hidden" placeholder="1200" min="100" max="10000">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">프롬프트</label>
+                <textarea id="promptText" class="form-input form-textarea" rows="10"></textarea>
+            </div>
+
+            <div class="flex gap-2 justify-between">
+                <button id="promptBackBtn" class="btn btn-secondary" data-i18n="review_back_button">양식으로 돌아가기</button>
+                <button id="confirmGenerateBtn" class="btn btn-primary" data-i18n="review_confirm_button">확인 & 생성</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Content Modal -->
+    <div id="addContentModal" class="modal">
+        <div class="modal-content" style="width: 800px;">
+            <h2 class="mb-2" data-i18n="output_addup_title">블로그 포스트에 내용 추가하기</h2>
+            
+            <div class="form-group">
+                <label class="form-label" data-i18n="output_addup_instructions_label">추가 지침</label>
+                <textarea id="addInstructions" class="form-input form-textarea" rows="4" data-i18n-placeholder="output_addup_instructions_placeholder"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" data-i18n="output_addup_photos_title">사진 더 추가하기</label>
+                <div id="additionalPhotos"></div>
+                <button type="button" id="addMorePhotoBtn" class="btn btn-secondary btn-small mt-2">
+                    ➕ <span data-i18n="output_addup_add_photo_field_button">사진 필드 추가</span>
+                </button>
+            </div>
+
+            <div class="flex gap-2 justify-between">
+                <button id="addContentCancelBtn" class="btn btn-secondary" data-i18n="output_addup_cancel_button">취소</button>
+                <button id="addContentConfirmBtn" class="btn btn-primary" data-i18n="output_addup_regenerate_button">추가하여 다시 생성</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tone Adjust Modal -->
+    <div id="toneModal" class="modal">
+        <div class="modal-content" style="width: 800px;">
+            <h2 class="mb-2" data-i18n="tone_adjuster_title">블로그 글 톤 조절하기</h2>
+            
+            <div class="tone-controls">
+                <div class="tone-group">
+                    <label class="form-label" data-i18n="tone_formality">격식</label>
+                    <select id="toneFormality" class="form-input">
+                        <option value="일상적">일상적</option>
+                        <option value="비공식적">비공식적</option>
+                        <option value="중립적" selected>중립적</option>
+                        <option value="공식적">공식적</option>
+                        <option value="전문적">전문적</option>
+                    </select>
+                </div>
+
+                <div class="tone-group">
+                    <label class="form-label" data-i18n="tone_enthusiasm">열정</label>
+                    <select id="toneEnthusiasm" class="form-input">
+                        <option value="차분함">차분함</option>
+                        <option value="평온함">평온함</option>
+                        <option value="중립적" selected>중립적</option>
+                        <option value="활기참">활기참</option>
+                        <option value="열정적">열정적</option>
+                    </select>
+                </div>
+
+                <div class="tone-group">
+                    <label class="form-label" data-i18n="tone_confidence">자신감</label>
+                    <select id="toneConfidence" class="form-input">
+                        <option value="객관적">객관적</option>
+                        <option value="신중함">신중함</option>
+                        <option value="중립적" selected>중립적</option>
+                        <option value="자신감있음">자신감있음</option>
+                        <option value="단호함">단호함</option>
+                    </select>
+                </div>
+
+                <div class="tone-group">
+                    <label class="form-label" data-i18n="tone_humor">유머</label>
+                    <select id="toneHumor" class="form-input">
+                        <option value="진지함">진지함</option>
+                        <option value="무미건조">무미건조</option>
+                        <option value="중립적" selected>중립적</option>
+                        <option value="재치있음">재치있음</option>
+                        <option value="위트있음">위트있음</option>
+                    </select>
+                </div>
+
+                <div class="tone-group">
+                    <label class="form-label" data-i18n="tone_clarity">명확성</label>
+                    <select id="toneClarity" class="form-input">
+                        <option value="단순함">단순함</option>
+                        <option value="간결함">간결함</option>
+                        <option value="중립적" selected>중립적</option>
+                        <option value="상세함">상세함</option>
+                        <option value="전문적">전문적</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex gap-2 justify-between">
+                <button id="toneCancelBtn" class="btn btn-secondary" data-i18n="tone_cancel_button">취소</button>
+                <button id="toneConfirmBtn" class="btn btn-primary" data-i18n="tone_regenerate_button">새로운 톤으로 다시 생성</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 전역 상태 관리
+        let currentState = {
+            apiKey: '',
+            language: 'ko',
+            theme: 'light',
+            photos: [],
+            generatedBlog: null,
+            isLoading: false
+        };
+
+        // 다국어 지원
+        const translations = {
+            ko: {
+                app_title: '몇 초 만에 멋진 블로그 만들기',
+                app_subtitle: '사진을 업로드하고, 세부 정보를 추가하면 AI가 글을 작성해 드립니다.',
+                api_key_label: 'Gemini API 키',
+                api_key_placeholder: 'AIzaSy... (Google AI Studio에서 받으세요)',
+                api_key_help: 'Google AI Studio에서 무료로 API 키를 받을 수 있습니다.',
+                form_category_label: '블로그 카테고리',
+                form_category_placeholder: '예: 여행, 음식, 기술',
+                form_topic_label: '주제 / 주요 아이디어',
+                form_topic_placeholder: '예: 나의 놀라운 제주도 여행',
+                form_photos_title: '사진 & 설명',
+                form_upload_photo: '사진 업로드',
+                form_photo_desc_placeholder: "이 사진을 설명해주세요 (예: '바다 위로 지는 아름다운 일몰')",
+                form_add_photos_button: '사진 추가하기',
+                form_review_prompt_button: '프롬프트 검토',
+                review_title: '프롬프트 검토',
+                review_subtitle: 'AI가 이 프롬프트를 사용하여 블로그 포스트를 생성합니다. 아래에서 수정하여 지침을 구체화할 수 있습니다.',
+                review_word_count_label: '목표 글자 수',
+                review_wc_option_1: '약 800자',
+                review_wc_option_2: '약 1500자',
+                review_wc_option_3: '약 2000자 (기본)',
+                review_wc_option_4: '약 2500자 이상',
+                review_wc_option_5: '직접 입력',
+                review_back_button: '양식으로 돌아가기',
+                review_confirm_button: '확인 & 생성',
+                output_title: '생성된 블로그 포스트',
+                output_add_modify_button: '콘텐츠 추가/수정',
+                output_adjust_tone_button: '톤 조절',
+                output_create_another_button: '다른 블로그 포스트 만들기',
+                output_tab_preview: '미리보기',
+                output_tab_html: 'HTML',
+                output_tab_markdown: '마크다운',
+                output_tab_text: '텍스트',
+                output_copy_html: 'HTML 복사',
+                output_copy_markdown: '마크다운 복사',
+                output_copy_text: '텍스트 복사',
+                output_addup_title: '블로그 포스트에 내용 추가하기',
+                output_addup_instructions_label: '추가 지침',
+                output_addup_instructions_placeholder: '예: 우리가 먹어본 현지 음식에 대한 섹션을 추가해줘. 결론을 더 낙관적으로 만들어줘.',
+                output_addup_photos_title: '사진 더 추가하기',
+                output_addup_add_photo_field_button: '사진 필드 추가',
+                output_addup_cancel_button: '취소',
+                output_addup_regenerate_button: '추가하여 다시 생성',
+                tone_adjuster_title: '블로그 글 톤 조절하기',
+                tone_formality: '격식',
+                tone_enthusiasm: '열정',
+                tone_confidence: '자신감',
+                tone_humor: '유머',
+                tone_clarity: '명확성',
+                tone_cancel_button: '취소',
+                tone_regenerate_button: '새로운 톤으로 다시 생성',
+                error_api_key_required: 'Gemini API 키를 입력해주세요.',
+                error_form_validation: '카테고리, 주제, 그리고 설명이 포함된 사진을 하나 이상 입력해주세요.',
+                error_generation_failed: '블로그 생성에 실패했습니다. API 키를 확인하고 다시 시도해주세요.',
+                success_copied: '복사되었습니다!',
+                loading_message_1: "AI의 창의력을 예열 중...",
+                loading_message_2: "아름다운 사진들을 분석 중...",
+                loading_message_3: "흥미로운 이야기의 초안을 작성 중...",
+                loading_message_4: "완벽한 단어들을 찾는 중...",
+                loading_message_5: "마지막 문장들을 다듬는 중...",
+                loading_message_6: "거의 다 왔어요, 마법이 일어나고 있습니다!"
+            },
+            en: {
+                app_title: 'Create Stunning Blogs in Seconds',
+                app_subtitle: 'Upload your photos, add some details, and let our AI do the writing for you.',
+                api_key_label: 'Gemini API Key',
+                api_key_placeholder: 'AIzaSy... (Get it from Google AI Studio)',
+                api_key_help: 'You can get a free API key from Google AI Studio.',
+                form_category_label: 'Blog Category',
+                form_category_placeholder: 'e.g., Travel, Food, Technology',
+                form_topic_label: 'Topic / Main Idea',
+                form_topic_placeholder: 'e.g., My amazing trip to Jeju Island',
+                form_photos_title: 'Photos & Descriptions',
+                form_upload_photo: 'Upload Photo',
+                form_photo_desc_placeholder: "Describe this photo (e.g., 'A beautiful sunset over the ocean')",
+                form_add_photos_button: 'Add More Photos',
+                form_review_prompt_button: 'Review Prompt',
+                review_title: 'Review Your Prompt',
+                review_subtitle: 'The AI will use this prompt to generate your blog post. You can edit it below to refine the instructions.',
+                review_word_count_label: 'Target Word Count',
+                review_wc_option_1: 'Approx. 800 words',
+                review_wc_option_2: 'Approx. 1500 words',
+                review_wc_option_3: 'Approx. 2000 words (Default)',
+                review_wc_option_4: 'Approx. 2500+ words',
+                review_wc_option_5: 'Custom',
+                review_back_button: 'Back to Form',
+                review_confirm_button: 'Confirm & Generate',
+                output_title: 'Your Generated Blog Post',
+                output_add_modify_button: 'Add/Modify Content',
+                output_adjust_tone_button: 'Adjust Tone',
+                output_create_another_button: 'Create Another Blog Post',
+                output_tab_preview: 'Preview',
+                output_tab_html: 'HTML',
+                output_tab_markdown: 'Markdown',
+                output_tab_text: 'Text',
+                output_copy_html: 'Copy HTML',
+                output_copy_markdown: 'Copy Markdown',
+                output_copy_text: 'Copy Text',
+                output_addup_title: 'Add to Your Blog Post',
+                output_addup_instructions_label: 'Additional Instructions',
+                output_addup_instructions_placeholder: 'e.g., Add a section about the local food we tried. Make the conclusion more optimistic.',
+                output_addup_photos_title: 'Add More Photos',
+                output_addup_add_photo_field_button: 'Add Photo Field',
+                output_addup_cancel_button: 'Cancel',
+                output_addup_regenerate_button: 'Regenerate with Additions',
+                tone_adjuster_title: 'Adjust the Tone of Your Post',
+                tone_formality: 'Formality',
+                tone_enthusiasm: 'Enthusiasm',
+                tone_confidence: 'Confidence',
+                tone_humor: 'Humor',
+                tone_clarity: 'Clarity',
+                tone_cancel_button: 'Cancel',
+                tone_regenerate_button: 'Regenerate with New Tone',
+                error_api_key_required: 'Please enter your Gemini API key.',
+                error_form_validation: 'Please fill in the category, topic, and at least one photo with a description.',
+                error_generation_failed: 'Failed to generate blog post. Please check your API key and try again.',
+                success_copied: 'Copied!',
+                loading_message_1: "Warming up the AI's creativity...",
+                loading_message_2: "Analyzing your beautiful photos...",
+                loading_message_3: "Drafting a compelling story...",
+                loading_message_4: "Finding the perfect words...",
+                loading_message_5: "Polishing the final sentences...",
+                loading_message_6: "Almost there, the magic is happening!"
+            }
+        };
+
+        // 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+            setupEventListeners();
+            addInitialPhoto();
+        });
+
+        function initializeApp() {
+            // 테마 초기화
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            setTheme(savedTheme);
+            
+            // 언어 초기화
+            updateLanguage(currentState.language);
+        }
+
+        function setupEventListeners() {
+            // 테마 토글
+            document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+            
+            // 언어 선택
+            document.getElementById('languageSelect').addEventListener('change', (e) => {
+                updateLanguage(e.target.value);
+            });
+
+            // 사진 추가 버튼
+            document.getElementById('addPhotoBtn').addEventListener('click', addPhotoField);
+
+            // 프롬프트 검토 버튼
+            document.getElementById('reviewBtn').addEventListener('click', openPromptReview);
+
+            // 모달 이벤트들
+            setupModalEvents();
+
+            // 탭 이벤트들
+            setupTabEvents();
+
+            // 글자수 선택 이벤트
+            document.getElementById('wordCountSelect').addEventListener('change', function() {
+                const customInput = document.getElementById('customWordCount');
+                if (this.value === 'custom') {
+                    customInput.classList.remove('hidden');
+                } else {
+                    customInput.classList.add('hidden');
+                }
+            });
+        }
+
+        function setupModalEvents() {
+            // 프롬프트 모달
+            document.getElementById('promptBackBtn').addEventListener('click', () => {
+                document.getElementById('promptModal').classList.remove('show');
+            });
+            document.getElementById('confirmGenerateBtn').addEventListener('click', generateBlogPost);
+
+            // 콘텐츠 추가 모달
+            document.getElementById('addContentBtn').addEventListener('click', openAddContentModal);
+            document.getElementById('addContentCancelBtn').addEventListener('click', () => {
+                document.getElementById('addContentModal').classList.remove('show');
+            });
+            document.getElementById('addContentConfirmBtn').addEventListener('click', addContentToBlog);
+            document.getElementById('addMorePhotoBtn').addEventListener('click', addAdditionalPhoto);
+
+            // 톤 조정 모달
+            document.getElementById('adjustToneBtn').addEventListener('click', openToneModal);
+            document.getElementById('toneCancelBtn').addEventListener('click', () => {
+                document.getElementById('toneModal').classList.remove('show');
+            });
+            document.getElementById('toneConfirmBtn').addEventListener('click', adjustTone);
+
+            // 다른 블로그 포스트 만들기
+            document.getElementById('createAnotherBtn').addEventListener('click', resetApp);
+
+            // 모달 배경 클릭으로 닫기
+            document.querySelectorAll('.modal').forEach(modal => {
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        modal.classList.remove('show');
+                    }
+                });
+            });
+        }
+
+        function setupTabEvents() {
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const tabName = tab.dataset.tab;
+                    
+                    // 모든 탭 비활성화
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+                    
+                    // 선택된 탭 활성화
+                    tab.classList.add('active');
+                    document.getElementById(tabName + 'Tab').classList.add('active');
+                });
+            });
+        }
+
+        function toggleTheme() {
+            const newTheme = currentState.theme === 'light' ? 'dark' : 'light';
+            setTheme(newTheme);
+        }
+
+        function setTheme(theme) {
+            currentState.theme = theme;
+            document.body.dataset.theme = theme;
+            document.getElementById('themeToggle').textContent = theme === 'light' ? '🌙' : '☀️';
+            localStorage.setItem('theme', theme);
+        }
+
+        function updateLanguage(lang) {
+            currentState.language = lang;
+            document.getElementById('languageSelect').value = lang;
+            
+            // 모든 다국어 요소 업데이트
+            document.querySelectorAll('[data-i18n]').forEach(element => {
+                const key = element.dataset.i18n;
+                if (translations[lang] && translations[lang][key]) {
+                    element.textContent = translations[lang][key];
+                }
+            });
+
+            // placeholder 업데이트
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(element => {
+                const key = element.dataset.i18nPlaceholder;
+                if (translations[lang] && translations[lang][key]) {
+                    element.placeholder = translations[lang][key];
+                }
+            });
+        }
+
+        function t(key) {
+            return translations[currentState.language][key] || key;
+        }
+
+        function addInitialPhoto() {
+            addPhotoField();
+        }
+
+        function addPhotoField() {
+            const container = document.getElementById('photoContainer');
+            const photoId = Date.now();
+            
+            const photoDiv = document.createElement('div');
+            photoDiv.className = 'photo-item';
+            photoDiv.dataset.photoId = photoId;
+            
+            photoDiv.innerHTML = `
+                <div class="photo-preview" onclick="document.getElementById('file-${photoId}').click()">
+                    <div class="upload-placeholder">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                            <circle cx="8.5" cy="8.5" r="1.5"/>
+                            <polyline points="21,15 16,10 5,21"/>
+                        </svg>
+                        <span>${t('form_upload_photo')}</span>
+                    </div>
+                    <input type="file" id="file-${photoId}" accept="image/*" style="display: none;" onchange="handlePhotoUpload(${photoId}, this)">
+                </div>
+                <div class="photo-content">
+                    <textarea class="form-input form-textarea" placeholder="${t('form_photo_desc_placeholder')}" rows="3" onchange="updatePhotoDescription(${photoId}, this.value)"></textarea>
+                    <button type="button" class="btn btn-error btn-small mt-2" onclick="removePhoto(${photoId})">
+                        🗑️ 삭제
+                    </button>
+                </div>
+            `;
+            
+            container.appendChild(photoDiv);
+            
+            // 사진 객체 초기화
+            currentState.photos.push({
+                id: photoId,
+                file: null,
+                description: '',
+                base64: '',
+                mimeType: ''
+            });
+        }
+
+        function handlePhotoUpload(photoId, input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const photoIndex = currentState.photos.findIndex(p => p.id === photoId);
+            if (photoIndex === -1) return;
+
+            // 미리보기 표시
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const preview = document.querySelector(`[data-photo-id="${photoId}"] .photo-preview`);
+                preview.innerHTML = `<img src="${e.target.result}" alt="Preview" style="width: 100%; height: 100%; object-fit: cover; border-radius: 6px;">`;
+            };
+            reader.readAsDataURL(file);
+
+            // base64로 변환하여 저장
+            const base64Reader = new FileReader();
+            base64Reader.onload = function(e) {
+                const base64String = e.target.result.split(',')[1];
+                currentState.photos[photoIndex] = {
+                    ...currentState.photos[photoIndex],
+                    file: file,
+                    base64: base64String,
+                    mimeType: file.type
+                };
+            };
+            base64Reader.readAsDataURL(file);
+        }
+
+        function updatePhotoDescription(photoId, description) {
+            const photoIndex = currentState.photos.findIndex(p => p.id === photoId);
+            if (photoIndex !== -1) {
+                currentState.photos[photoIndex].description = description;
+            }
+        }
+
+        function removePhoto(photoId) {
+            // DOM에서 제거
+            const photoElement = document.querySelector(`[data-photo-id="${photoId}"]`);
+            photoElement.remove();
+            
+            // 상태에서 제거
+            currentState.photos = currentState.photos.filter(p => p.id !== photoId);
+        }
+
+        function openPromptReview() {
+            // 폼 검증
+            const category = document.getElementById('category').value.trim();
+            const topic = document.getElementById('topic').value.trim();
+            const validPhotos = currentState.photos.filter(p => p.file && p.description.trim());
+
+            if (!category || !topic || validPhotos.length === 0) {
+                alert(t('error_form_validation'));
+                return;
+            }
+
+            // 프롬프트 생성
+            const prompt = generatePrompt(category, topic, validPhotos);
+            document.getElementById('promptText').value = prompt;
+            
+            // 모달 표시
+            document.getElementById('promptModal').classList.add('show');
+        }
+
+        function generatePrompt(category, topic, photos) {
+            const photoDescriptions = photos.map((p, i) => `- Photo ${i + 1}: ${p.description}`).join('\n');
+            
+            if (currentState.language === 'ko') {
+                return `# AI 블로그 포스트 생성 가이드라인
+
+## 1. 목표 및 목적
+블로그 글 작성은 고품질의 정보성 글을 작성하는 것을 목표로 합니다. 글은 독자에게 가치를 제공하고 독자의 관심을 끌 수 있는 내용으로 작성해야 합니다.
+
+## 2. 글의 톤과 스타일
+- 독자에게 친근하고, 접근하기 쉬운 언어를 사용해야 합니다.
+- 간결하고 명료한 문장을 사용합니다.
+- **가독성 최적화**: 대제목(#), 중제목(##), 소제목(###)을 사용하여 콘텐츠의 계층 구조를 명확하게 합니다.
+- 중요한 키워드나 강조하고 싶은 문장은 **굵은 글씨**로 표시합니다.
+
+## 3. 글의 구조
+### 제목:
+- 제목은 주제를 간결하고 매력적으로 요약합니다.
+- **검색어 최적화(SEO)**를 고려하여 제목을 작성합니다.
+
+### 본문:
+- 세부 내용을 체계적으로 전개합니다.
+- **중요**: 본문 내용 중 사진이 들어갈 가장 적절한 위치에 \`[IMAGE-1]\`, \`[IMAGE-2]\`와 같은 플레이스홀더를 반드시 삽입해주세요.
+- 각 플레이스홀더는 제공된 사진 순서와 일치해야 합니다.
+
+## 4. 글의 길이
+- 이 블로그 글은 **약 2000자**로 작성해주세요.
+
+---
+
+**[생성 요청]**
+위 가이드라인에 따라 아래 정보를 바탕으로 완전한 한국어 블로그 포스트를 생성해주세요. 최종 결과물은 JSON 형식으로 제공해주세요:
+
+\`\`\`json
+{
+  "title": "매력적인 블로그 제목",
+  "content": "마크다운 형식의 블로그 내용 (이미지 플레이스홀더 포함)",
+  "image_captions": ["이미지 1 캡션", "이미지 2 캡션", ...]
+}
+\`\`\`
+
+- **블로그 카테고리:** ${category}
+- **주요 토픽/아이디어:** ${topic}
+- **포함할 사진 및 설명 (순서대로 이미지 플레이스홀더를 본문에 삽입):**
+${photoDescriptions}`;
+            } else {
+                return `# AI Blog Post Generation Guidelines
+
+## 1. Goal and Objective
+Write a high-quality, informative blog post that provides value to readers and captures their interest.
+
+## 2. Tone and Style
+- Use friendly and accessible language.
+- Use concise and clear sentences.
+- **Optimize for Readability**: Use main headings (#), subheadings (##), and minor headings (###) to create a clear content hierarchy.
+- Emphasize important keywords using **bold text**.
+
+## 3. Post Structure
+### Title:
+- The title should be a concise and appealing summary of the topic.
+- Consider **Search Engine Optimization (SEO)**.
+
+### Body:
+- Develop the main content in a structured manner.
+- **Important**: Insert placeholders like \`[IMAGE-1]\`, \`[IMAGE-2]\` at the most appropriate locations in the text.
+- Each placeholder must correspond to the order of the provided photos.
+
+## 4. Post Length
+- Please write this blog post to be **approximately 2000 characters**.
+
+---
+
+**[Generation Request]**
+Based on the guidelines above, please generate a complete blog post in English using the following information. Please provide the final output in JSON format:
+
+\`\`\`json
+{
+  "title": "Engaging Blog Title",
+  "content": "Blog content in Markdown format (with image placeholders)",
+  "image_captions": ["Image 1 caption", "Image 2 caption", ...]
+}
+\`\`\`
+
+- **Blog Category:** ${category}
+- **Main Topic/Idea:** ${topic}
+- **Photos and Descriptions to Include:**
+${photoDescriptions}`;
+            }
+        }
+
+        async function generateBlogPost() {
+            const apiKey = document.getElementById('apiKey').value.trim();
+            if (!apiKey) {
+                showError(t('error_api_key_required'));
+                document.getElementById('apiKeySection').classList.add('error');
+                return;
+            }
+
+            // API 키 저장 및 에러 상태 제거
+            currentState.apiKey = apiKey;
+            document.getElementById('apiKeySection').classList.remove('error');
+
+            // 프롬프트 가져오기
+            let prompt = document.getElementById('promptText').value.trim();
+            
+            // 글자수 설정 적용
+            const wordCount = document.getElementById('wordCountSelect').value;
+            const customCount = document.getElementById('customWordCount').value;
+            
+            if (wordCount === 'custom' && customCount) {
+                if (currentState.language === 'ko') {
+                    prompt = prompt.replace(/\*\*약 \d+자(\s이상)?\*\*/, `**약 ${customCount}자**`);
+                } else {
+                    prompt = prompt.replace(/\*\*approximately \d+ characters(\s or more)?\*\*/, `**approximately ${customCount} characters**`);
+                }
+            } else if (wordCount !== 'custom') {
+                const suffix = wordCount === '2500' ? (currentState.language === 'ko' ? ' 이상' : ' or more') : '';
+                if (currentState.language === 'ko') {
+                    prompt = prompt.replace(/\*\*약 \d+자(\s이상)?\*\*/, `**약 ${wordCount}자${suffix}**`);
+                } else {
+                    prompt = prompt.replace(/\*\*approximately \d+ characters(\s or more)?\*\*/, `**approximately ${wordCount} characters${suffix}**`);
+                }
+            }
+
+            // 모달 닫기 및 로딩 시작
+            document.getElementById('promptModal').classList.remove('show');
+            showLoading(true);
+
+            try {
+                const validPhotos = currentState.photos.filter(p => p.file && p.description.trim());
+                const result = await callGeminiAPI(prompt, validPhotos);
+                
+                currentState.generatedBlog = result;
+                showBlogOutput(result, validPhotos);
+                showLoading(false);
+                
+            } catch (error) {
+                console.error('Blog generation failed:', error);
+                showError(t('error_generation_failed'));
+                showLoading(false);
+            }
+        }
+
+        async function callGeminiAPI(prompt, photos) {
+            const API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+            
+            const imageParts = photos.map(photo => ({
+                inlineData: {
+                    data: photo.base64,
+                    mimeType: photo.mimeType
+                }
+            }));
+
+            const requestBody = {
+                contents: [{
+                    parts: [
+                        { text: prompt },
+                        ...imageParts
+                    ]
+                }],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    temperature: 0.7,
+                    responseSchema: {
+                        type: "object",
+                        properties: {
+                            title: {
+                                type: "string",
+                                description: "A catchy and SEO-friendly title for the blog post."
+                            },
+                            content: {
+                                type: "string",
+                                description: "The full content of the blog post in Markdown format."
+                            },
+                            image_captions: {
+                                type: "array",
+                                items: {
+                                    type: "string"
+                                },
+                                description: "An array of rewritten, engaging captions for each photo."
+                            }
+                        },
+                        required: ["title", "content", "image_captions"]
+                    }
+                }
+            };
+
+            const response = await fetch(`${API_URL}?key=${currentState.apiKey}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`API Error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+            }
+
+            const data = await response.json();
+            const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            
+            if (!responseText) {
+                throw new Error('No response text from API');
+            }
+
+            // JSON 파싱
+            let cleanedText = responseText.trim();
+            const jsonMatch = cleanedText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+            if (jsonMatch) {
+                cleanedText = jsonMatch[1];
+            }
+
+            try {
+                const blogObject = JSON.parse(cleanedText);
+                
+                if (!blogObject.title || !blogObject.content || !Array.isArray(blogObject.image_captions)) {
+                    throw new Error('Invalid response structure');
+                }
+                
+                return blogObject;
+            } catch (parseError) {
+                console.error('JSON parsing failed:', cleanedText);
+                throw new Error('Failed to parse API response');
+            }
+        }
+
+        function showLoading(show) {
+            currentState.isLoading = show;
+            const loadingSection = document.getElementById('loadingSection');
+            const blogForm = document.getElementById('blogForm');
+            const blogOutput = document.getElementById('blogOutput');
+            
+            if (show) {
+                loadingSection.classList.remove('hidden');
+                blogForm.classList.add('hidden');
+                blogOutput.classList.add('hidden');
+                
+                // 로딩 메시지 순환
+                const messages = [
+                    t('loading_message_1'),
+                    t('loading_message_2'),
+                    t('loading_message_3'),
+                    t('loading_message_4'),
+                    t('loading_message_5'),
+                    t('loading_message_6')
+                ];
+                
+                let messageIndex = 0;
+                const messageElement = document.getElementById('loadingMessage');
+                
+                const updateMessage = () => {
+                    messageElement.textContent = messages[messageIndex];
+                    messageIndex = (messageIndex + 1) % messages.length;
+                };
+                
+                updateMessage();
+                currentState.loadingInterval = setInterval(updateMessage, 3000);
+                
+            } else {
+                loadingSection.classList.add('hidden');
+                if (currentState.loadingInterval) {
+                    clearInterval(currentState.loadingInterval);
+                }
+            }
+        }
+
+        function showBlogOutput(blog, photos) {
+            document.getElementById('blogForm').classList.add('hidden');
+            document.getElementById('blogOutput').classList.remove('hidden');
+            
+            // 콘텐츠 생성
+            const htmlContent = convertMarkdownToHtml(blog.content, blog.image_captions, photos);
+            const textContent = convertMarkdownToText(blog.content);
+            
+            // 각 탭 콘텐츠 업데이트
+            document.getElementById('blogPreview').innerHTML = htmlContent;
+            document.getElementById('htmlContent').textContent = htmlContent;
+            document.getElementById('markdownContent').textContent = blog.content;
+            document.getElementById('textContent').textContent = textContent;
+        }
+
+        function convertMarkdownToHtml(markdown, captions, photos) {
+            let html = markdown
+                // 제목 변환
+                .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+                .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+                .replace(/^# (.*$)/gm, '<h1>$1</h1>')
+                
+                // 굵은 글씨
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                
+                // 기울임
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                
+                // 줄바꿈을 <p> 태그로
+                .split('\n\n')
+                .map(paragraph => {
+                    if (paragraph.trim() && !paragraph.startsWith('<h') && !paragraph.includes('[IMAGE-')) {
+                        return `<p>${paragraph.replace(/\n/g, '<br>')}</p>`;
+                    }
+                    return paragraph.replace(/\n/g, '<br>');
+                })
+                .join('\n');
+
+            // 이미지 플레이스홀더 교체
+            for (let i = 0; i < photos.length; i++) {
+                const imageTag = `<figure style="margin: 2rem 0; text-align: center;">
+                    <img src="${URL.createObjectURL(photos[i].file)}" alt="${captions[i] || photos[i].description}" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+                    <figcaption style="margin-top: 0.5rem; color: var(--text-secondary); font-style: italic;">${captions[i] || photos[i].description}</figcaption>
+                </figure>`;
+                html = html.replace(`[IMAGE-${i + 1}]`, imageTag);
+            }
+
+            return html;
+        }
+
+        function convertMarkdownToText(markdown) {
+            return markdown
+                .replace(/^#{1,6}\s/gm, '')
+                .replace(/\*\*(.*?)\*\*/g, '$1')
+                .replace(/\*(.*?)\*/g, '$1')
+                .replace(/\[IMAGE-\d+\]/g, '[이미지]')
+                .replace(/\n{3,}/g, '\n\n')
+                .trim();
+        }
+
+        function copyToClipboard(elementId) {
+            const element = document.getElementById(elementId);
+            const text = element.textContent;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                // 성공 메시지 표시
+                const button = element.parentElement.querySelector('button');
+                const originalText = button.textContent;
+                button.textContent = t('success_copied');
+                
+                setTimeout(() => {
+                    button.innerHTML = `<span data-i18n="${elementId.replace('Content', '').replace(/^(.)/, (match) => `output_copy_${match.toLowerCase()}`)}"></span>`;
+                    updateLanguage(currentState.language);
+                }, 2000);
+            }).catch(err => {
+                console.error('복사 실패:', err);
+            });
+        }
+
+        function openAddContentModal() {
+            document.getElementById('addContentModal').classList.add('show');
+            document.getElementById('additionalPhotos').innerHTML = '';
+        }
+
+        function addAdditionalPhoto() {
+            const container = document.getElementById('additionalPhotos');
+            const photoId = Date.now();
+            
+            const photoDiv = document.createElement('div');
+            photoDiv.className = 'photo-item';
+            photoDiv.dataset.additionalPhotoId = photoId;
+            
+            photoDiv.innerHTML = `
+                <div class="photo-preview" onclick="document.getElementById('additional-file-${photoId}').click()">
+                    <div class="upload-placeholder">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                            <circle cx="8.5" cy="8.5" r="1.5"/>
+                            <polyline points="21,15 16,10 5,21"/>
+                        </svg>
+                        <span>${t('form_upload_photo')}</span>
+                    </div>
+                    <input type="file" id="additional-file-${photoId}" accept="image/*" style="display: none;" onchange="handleAdditionalPhotoUpload(${photoId}, this)">
+                </div>
+                <div class="photo-content">
+                    <textarea class="form-input form-textarea" placeholder="${t('form_photo_desc_placeholder')}" rows="3"></textarea>
+                    <button type="button" class="btn btn-error btn-small mt-2" onclick="removeAdditionalPhoto(${photoId})">
+                        🗑️ 삭제
+                    </button>
+                </div>
+            `;
+            
+            container.appendChild(photoDiv);
+        }
+
+        function handleAdditionalPhotoUpload(photoId, input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const preview = document.querySelector(`[data-additional-photo-id="${photoId}"] .photo-preview`);
+                preview.innerHTML = `<img src="${e.target.result}" alt="Preview" style="width: 100%; height: 100%; object-fit: cover; border-radius: 6px;">`;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeAdditionalPhoto(photoId) {
+            const photoElement = document.querySelector(`[data-additional-photo-id="${photoId}"]`);
+            photoElement.remove();
+        }
+
+        async function addContentToBlog() {
+            const instructions = document.getElementById('addInstructions').value.trim();
+            const additionalPhotoElements = document.querySelectorAll('[data-additional-photo-id]');
+            
+            // 추가 사진들 처리
+            const additionalPhotos = [];
+            for (let element of additionalPhotoElements) {
+                const photoId = element.dataset.additionalPhotoId;
+                const fileInput = document.getElementById(`additional-file-${photoId}`);
+                const textarea = element.querySelector('textarea');
+                
+                if (fileInput.files[0] && textarea.value.trim()) {
+                    const file = fileInput.files[0];
+                    const base64 = await fileToBase64(file);
+                    
+                    additionalPhotos.push({
+                        id: photoId,
+                        file: file,
+                        description: textarea.value.trim(),
+                        base64: base64.split(',')[1],
+                        mimeType: file.type
+                    });
+                }
+            }
+
+            if (!instructions && additionalPhotos.length === 0) {
+                alert(t('output_addup_validation_error_empty'));
+                return;
+            }
+
+            // 모든 사진 합치기 (기존 + 추가)
+            const allPhotos = [...currentState.photos.filter(p => p.file), ...additionalPhotos];
+            
+            // 추가 프롬프트 생성
+            const addUpPrompt = generateAddUpPrompt(instructions, currentState.generatedBlog, allPhotos);
+            
+            // 모달 닫기 및 로딩 시작
+            document.getElementById('addContentModal').classList.remove('show');
+            showLoading(true);
+
+            try {
+                const result = await callGeminiAPI(addUpPrompt, allPhotos);
+                
+                currentState.generatedBlog = result;
+                currentState.photos = allPhotos; // 사진 목록 업데이트
+                showBlogOutput(result, allPhotos);
+                showLoading(false);
+                
+            } catch (error) {
+                console.error('Add content failed:', error);
+                showError(t('error_generation_failed'));
+                showLoading(false);
+            }
+        }
+
+        function generateAddUpPrompt(instructions, currentBlog, allPhotos) {
+            const photoDescriptions = allPhotos.map((p, i) => `- Photo ${i + 1}: ${p.description}`).join('\n');
+            
+            if (currentState.language === 'ko') {
+                return `# AI 블로그 포스트 수정 및 확장 가이드라인
+
+## 1. 목표
+기존에 작성된 블로그 포스트를 사용자의 추가 지침에 따라 수정하고 확장하는 것을 목표로 합니다. 기존 글의 톤, 스타일, 구조를 유지하면서 새로운 내용을 자연스럽게 통합해야 합니다.
+
+## 2. 기존 블로그 포스트 내용
+### 제목:
+${currentBlog.title}
+
+### 본문 (Markdown):
+\`\`\`markdown
+${currentBlog.content}
+\`\`\`
+
+## 3. 사용자 추가 요청사항
+다음은 사용자가 요청한 수정 및 추가 내용입니다. 이 내용을 기존 블로그 포스트에 반영해주세요.
+- **추가 지침:** ${instructions || "없음"}
+
+## 4. 전체 사진 목록
+수정된 블로그 포스트에는 아래의 모든 사진을 사용해야 합니다. 기존 사진과 새로 추가된 사진이 모두 포함되어 있습니다. 본문 내용에 맞게 각 사진의 위치를 재배치하고, 가장 적절한 곳에 \`[IMAGE-1]\`, \`[IMAGE-2]\`... 와 같은 플레이스홀더를 삽입해주세요.
+- **사용할 사진 및 설명 (순서대로 이미지 플레이스홀더를 본문에 삽입):**
+${photoDescriptions}
+
+## 5. 최종 결과물 요구사항
+- 기존 블로그 포스트의 내용과 새로운 요청사항을 완벽하게 통합하여 **하나의 완성된 새 블로그 포스트**를 생성해주세요.
+- 최종 결과물은 JSON 형식으로 제공해주세요:
+
+\`\`\`json
+{
+  "title": "수정된 블로그 제목",
+  "content": "수정된 마크다운 형식의 블로그 내용",
+  "image_captions": ["모든 이미지에 대한 캡션 배열"]
+}
+\`\`\`
+
+---
+
+**[수정 및 확장 요청]**
+위 가이드라인과 정보를 바탕으로 완전한 한국어 블로그 포스트를 재생성해주세요.`;
+            } else {
+                return `# AI Blog Post Revision and Expansion Guidelines
+
+## 1. Goal
+The goal is to revise and expand a previously generated blog post based on the user's additional instructions. The new content should be seamlessly integrated while maintaining the original tone, style, and structure.
+
+## 2. Existing Blog Post Content
+### Title:
+${currentBlog.title}
+
+### Body (Markdown):
+\`\`\`markdown
+${currentBlog.content}
+\`\`\`
+
+## 3. User's Additional Requests
+The following are the user's requested revisions and additions. Please incorporate these into the existing blog post.
+- **Additional Instructions:** ${instructions || "None"}
+
+## 4. Full List of Photos
+The revised blog post must use all of the photos listed below, including both original and newly added ones. Please rearrange the placement of each photo as needed to fit the content, and insert placeholders like \`[IMAGE-1]\`, \`[IMAGE-2]\`... in the most appropriate locations.
+- **Photos to Use (insert image placeholders in order):**
+${photoDescriptions}
+
+## 5. Final Output Requirements
+- Perfectly integrate the existing blog post content with the new requests to generate **one complete, new blog post**.
+- The final output must be in JSON format:
+
+\`\`\`json
+{
+  "title": "Updated Blog Title",
+  "content": "Updated blog content in Markdown format",
+  "image_captions": ["Array of captions for all images"]
+}
+\`\`\`
+
+---
+
+**[Revision and Expansion Request]**
+Based on the guidelines and information above, please regenerate a complete blog post in English.`;
+            }
+        }
+
+        function openToneModal() {
+            document.getElementById('toneModal').classList.add('show');
+        }
+
+        async function adjustTone() {
+            const toneSettings = {
+                formality: document.getElementById('toneFormality').value,
+                enthusiasm: document.getElementById('toneEnthusiasm').value,
+                confidence: document.getElementById('toneConfidence').value,
+                humor: document.getElementById('toneHumor').value,
+                clarity: document.getElementById('toneClarity').value
+            };
+
+            // 톤 조정 프롬프트 생성
+            const allPhotos = currentState.photos.filter(p => p.file);
+            const tonePrompt = generateToneAdjustPrompt(toneSettings, currentState.generatedBlog, allPhotos);
+            
+            // 모달 닫기 및 로딩 시작
+            document.getElementById('toneModal').classList.remove('show');
+            showLoading(true);
+
+            try {
+                const result = await callGeminiAPI(tonePrompt, allPhotos);
+                
+                currentState.generatedBlog = result;
+                showBlogOutput(result, allPhotos);
+                showLoading(false);
+                
+            } catch (error) {
+                console.error('Tone adjustment failed:', error);
+                showError(t('error_generation_failed'));
+                showLoading(false);
+            }
+        }
+
+        function generateToneAdjustPrompt(toneSettings, currentBlog, allPhotos) {
+            const photoDescriptions = allPhotos.map((p, i) => `- Photo ${i + 1}: ${p.description}`).join('\n');
+            
+            if (currentState.language === 'ko') {
+                return `# AI 블로그 포스트 톤 조절 가이드라인
+
+## 1. 목표
+기존에 작성된 블로그 포스트의 **톤과 스타일**을 사용자의 요구사항에 맞게 다시 작성하는 것을 목표로 합니다. 글의 핵심 내용, 구조, 그리고 사진 배치는 그대로 유지해야 합니다.
+
+## 2. 기존 블로그 포스트 내용
+### 제목:
+${currentBlog.title}
+
+### 본문 (Markdown):
+\`\`\`markdown
+${currentBlog.content}
+\`\`\`
+
+## 3. 새로운 톤 요구사항
+아래의 톤 지표에 따라 글의 전체적인 분위기를 수정해주세요. 단어 선택, 문장 구조, 표현 방식 등을 조절하여 새로운 톤을 반영해야 합니다.
+
+- **격식 (Formality):** ${toneSettings.formality}
+- **열정 (Enthusiasm):** ${toneSettings.enthusiasm}
+- **자신감 (Confidence):** ${toneSettings.confidence}
+- **유머 (Humor):** ${toneSettings.humor}
+- **명확성 (Clarity):** ${toneSettings.clarity}
+
+## 4. 사진 목록
+블로그 포스트에 사용된 사진 목록입니다. 톤을 조절할 때, 사진과 관련된 내용이 어색해지지 않도록 주의하고, **사진 캡션('image_captions')** 또한 새로운 톤에 맞게 자연스럽게 수정해주세요.
+- **사용된 사진 및 설명:**
+${photoDescriptions}
+
+## 5. 최종 결과물 요구사항
+- **핵심 내용과 구조는 변경하지 마세요.** 오직 글의 톤과 스타일만 수정해야 합니다.
+- 본문 내의 이미지 플레이스홀더(\`[IMAGE-1]\` 등)는 원래 위치를 유지해야 합니다.
+- 최종 결과물은 JSON 형식으로 제공해주세요:
+
+\`\`\`json
+{
+  "title": "${currentBlog.title}",
+  "content": "새로운 톤으로 수정된 마크다운 내용",
+  "image_captions": ["새로운 톤에 맞는 이미지 캡션들"]
+}
+\`\`\`
+
+---
+
+**[톤 조절 재작성 요청]**
+위 가이드라인과 새로운 톤 요구사항에 따라, 기존 블로그 포스트를 한국어로 다시 작성해주세요.`;
+            } else {
+                return `# AI Blog Post Tone Adjustment Guidelines
+
+## 1. Goal
+The primary goal is to rewrite an existing blog post to match new **tone and style** requirements provided by the user. The core content, structure, and photo placements must remain the same.
+
+## 2. Existing Blog Post Content
+### Title:
+${currentBlog.title}
+
+### Body (Markdown):
+\`\`\`markdown
+${currentBlog.content}
+\`\`\`
+
+## 3. New Tone Requirements
+Please revise the overall feel of the post according to the following tone metrics. This should be reflected in word choice, sentence structure, and phrasing.
+
+- **Formality:** ${toneSettings.formality}
+- **Enthusiasm:** ${toneSettings.enthusiasm}
+- **Confidence:** ${toneSettings.confidence}
+- **Humor:** ${toneSettings.humor}
+- **Clarity:** ${toneSettings.clarity}
+
+## 4. Photo List
+This is the list of photos used in the blog post. As you adjust the tone, ensure the content related to the photos remains relevant, and please **rewrite the photo captions ('image_captions')** to naturally fit the new tone.
+- **Photos Used:**
+${photoDescriptions}
+
+## 5. Final Output Requirements
+- **Do not change the core content or structure.** The rewrite should only affect the tone and style.
+- Image placeholders (\`[IMAGE-1]\`, etc.) in the body must be preserved in their original locations.
+- The final output must be in JSON format:
+
+\`\`\`json
+{
+  "title": "${currentBlog.title}",
+  "content": "Tone-adjusted markdown content",
+  "image_captions": ["Tone-adjusted image captions"]
+}
+\`\`\`
+
+---
+
+**[Tone Adjustment Rewrite Request]**
+Based on the guidelines and new tone requirements above, please rewrite the blog post in English.`;
+            }
+        }
+
+        function resetApp() {
+            // 상태 초기화
+            currentState.generatedBlog = null;
+            currentState.photos = [];
+            
+            // UI 초기화
+            document.getElementById('blogForm').classList.remove('hidden');
+            document.getElementById('blogOutput').classList.add('hidden');
+            document.getElementById('category').value = '';
+            document.getElementById('topic').value = '';
+            document.getElementById('photoContainer').innerHTML = '';
+            
+            // 초기 사진 필드 추가
+            addInitialPhoto();
+        }
+
+        function showError(message) {
+            alert(message);
+        }
+
+        // 유틸리티 함수
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+            });
+        }
+    </script>
+</body>
+</html>
